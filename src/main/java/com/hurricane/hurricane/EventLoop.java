@@ -30,7 +30,7 @@ public class EventLoop {
   /**
    * Each selection key has an associated handler, which will be executed when the corresponding IO event is available.
    */
-  private Map<SelectionKey, Handler> handlers;
+  private Map<SelectionKey, SocketHandler> handlers;
 
   /**
    * Registered time events. Each time event's callback should be executed at the given deadline in IO Loop iteration.
@@ -40,7 +40,7 @@ public class EventLoop {
   /**
    * A selector for all network IO events
    */
-  private Selector selector;
+  private final Selector selector;
 
   /**
    * Flag for whether IOLoop is running.
@@ -95,12 +95,10 @@ public class EventLoop {
   /**
    * Registers the given handler to receive the given NIO events for this SelectionKey
    * @param key A key we want to register a caller for interested ops
-   * @param handler handler that we want to associate with the given key
-   * @param ops interested ops of the key
+   * @param socketHandler handler that we want to associate with the given key
    */
-  public void addHandler(SelectionKey key, Handler handler, int ops) {
-    handlers.put(key, handler);
-    key.interestOps(ops);
+  public void addHandler(SelectionKey key, SocketHandler socketHandler) {
+    handlers.put(key, socketHandler);
   }
 
   /**
@@ -159,7 +157,18 @@ public class EventLoop {
       SelectionKey key = keyIterator.next();
 
       // Execute handler associated with the IO event
-      handlers.get(key).run(key);
+      SocketHandler socketHandler = handlers.get(key);
+      if (socketHandler == null) {
+        logger.warn("No associated handler for SelectionKey = " + key);
+      } else {
+        try {
+          socketHandler.handleEvent();
+          logger.info("Successfully apply handler for SelectionKey = " + key);
+        } catch (IOException e) {
+          logger.warn("Failed to apply handler for SelectionKey = " + key, e);
+        }
+        logger.info("Apply handler for SelectionKey = " + key);
+      }
 
       // Remove from set of selected keys
       keyIterator.remove();
@@ -181,7 +190,7 @@ public class EventLoop {
       while (!timeEvents.isEmpty() && timeEvents.peek().getDeadline() <= now) {
         var timeoutEvent = timeEvents.poll();
         if (timeoutEvent != null) {
-          timeoutEvent.getCallback().run();
+          timeoutEvent.getCallback().run(null);
         }
       }
 
@@ -212,7 +221,7 @@ public class EventLoop {
     for (var callback : callbacksCopy) {
       if (callbacks.contains(callback)) {
         callbacks.remove(callback);
-        callback.run();
+        callback.run(null);
       }
     }
 
@@ -277,5 +286,9 @@ public class EventLoop {
    */
   private void wakeup() {
     selector.wakeup();
+  }
+
+  public Selector getSelector() {
+    return selector;
   }
 }

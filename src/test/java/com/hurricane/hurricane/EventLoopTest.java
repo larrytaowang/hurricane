@@ -2,14 +2,13 @@ package com.hurricane.hurricane;
 
 import java.util.LinkedList;
 import java.util.List;
-import java.util.concurrent.Callable;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
 
 /**
- * Test if adding/removing callbacks and time events works.
+ * Test if adding/removing callbacks and time events works. Network IO is covered in SocketHandlerTest.
  */
 public class EventLoopTest {
   /**
@@ -32,22 +31,10 @@ public class EventLoopTest {
    */
   private int calledCount;
 
-  /**
-   * A simple callable we use in this test
-   */
-  private Callable<Integer> callable;
-
   @Before
   public void setUp() throws Exception {
     this.eventLoop = EventLoop.getInstance();
     this.calledCount = 0;
-
-    this.callable = () -> {
-      calledCount += 1;
-      eventLoop.stop();
-      return 0;
-    };
-
     this.startTime = System.currentTimeMillis();
   }
 
@@ -63,7 +50,7 @@ public class EventLoopTest {
     // Add time event to the loop. These events expire at the start time so they should be executed at first iteration.
     var addCount = 10;
     for (int i = 0; i < addCount; i++) {
-      var timeEvent = new TimeEvent(startTime, new Callback(callable));
+      var timeEvent = new TimeEvent(startTime, createCallback());
       eventLoop.addTimeEvent(timeEvent);
     }
 
@@ -79,7 +66,7 @@ public class EventLoopTest {
     // Add callbacks to the event loop
     var addCount = 10;
     for (int i = 0; i < addCount; i++) {
-      var timeEvent = new TimeEvent(startTime, new Callback(callable));
+      var timeEvent = new TimeEvent(startTime, createCallback());
       eventLoop.addTimeEvent(timeEvent);
       timeEvents.add(timeEvent);
     }
@@ -100,8 +87,7 @@ public class EventLoopTest {
     // Add callbacks to the event loop
     var addCount = 10;
     for (int i = 0; i < addCount; i++) {
-      var callback = new Callback(callable);
-      eventLoop.addCallback(callback);
+      eventLoop.addCallback(createCallback());
     }
 
     eventLoop.start();
@@ -116,7 +102,7 @@ public class EventLoopTest {
     // Add callbacks to the event loop
     var addCount = 10;
     for (int i = 0; i < addCount; i++) {
-      var callback = new Callback(callable);
+      var callback = createCallback();
       eventLoop.addCallback(callback);
       callbacks.add(callback);
     }
@@ -139,5 +125,16 @@ public class EventLoopTest {
    */
   private boolean returnImmediately() {
     return System.currentTimeMillis() - startTime < TIME_THRESHOLD;
+  }
+
+  /**
+   * Created a simple callback for testing.
+   * @return a callback for testing.
+   */
+  private Callback createCallback() {
+    return args -> {
+      calledCount += 1;
+      eventLoop.stop();
+    };
   }
 }
