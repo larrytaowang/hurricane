@@ -1,8 +1,9 @@
-package com.hurricane.hurricane;
+package com.hurricane.hurricane.common;
 
+import com.hurricane.hurricane.tcp.TcpServer;
+import com.hurricane.hurricane.tcp.connection.TcpConnection;
 import java.io.IOException;
 import java.nio.channels.SelectionKey;
-import java.nio.channels.Selector;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -16,8 +17,8 @@ import org.apache.log4j.Logger;
 /**
  * @author larrytaowang
  *
- * A forever loop that handles callbacks, time events and IO events. Most single-threaded applications have a single,
- * global IOLoop instance.
+ * A forever loop that handles callbacks, time events and socket IO events. Most single-threaded applications have a
+ * single, global IOLoop instance.
  */
 public class EventLoop {
   private final static Logger logger = Logger.getLogger(EventLoop.class);
@@ -25,31 +26,27 @@ public class EventLoop {
   /**
    * Registered callbacks. Each callback will be executed in the current IO loop iteration.
    */
-  private Set<Callback> callbacks;
+  private Set<TcpCallback> callbacks;
 
   /**
-   * Each selection key has an associated handler, which will be executed when the corresponding IO event is available.
+   * This map contains selection key of each client socket, and its TcpConnection. A connection contains cache and
+   * handlers for read/write socket IO events.
    */
-  private Map<SelectionKey, SocketHandler> handlers;
+  private Map<SelectionKey, TcpConnection> clientConnections;
 
   /**
-   * Registered time events. Each time event's callback should be executed at the given deadline in IO Loop iteration.
+   * Registered time events. Each time event's callback should be executed at the given deadline in event Loop iteration
    */
   private PriorityQueue<TimeEvent> timeEvents;
 
   /**
-   * A selector for all network IO events
-   */
-  private final Selector selector;
-
-  /**
-   * Flag for whether IOLoop is running.
+   * Flag for whether event loop is running.
    */
   private Boolean isRunning;
 
   /**
-   * This is the flag for whether IO loop should continue or not. If we want to stop the IO loop after current
-   * iteration, set this flag to true in one of the IO handlers via stop().
+   * This is the flag for whether event loop should continue or not. If we want to stop the IO loop after current
+   * iteration, set this flag to true via stop() in Callback, TimeEvent, or TcpCallback.
    */
   private Boolean isStopped;
 
@@ -59,19 +56,15 @@ public class EventLoop {
   public static final long DEFAULT_SELECT_TIMEOUT = 3000;
 
   /**
-   * A singleton IOLoop instance
+   * A singleton EventLoop instance
    */
   private static EventLoop instance = null;
 
   /**
    * Constructor for Event Loop
-   * @throws IOException If the program fails to open a selector, there is nothing we can do to recover, so we should
-   * let it fail.
    */
-  private EventLoop() throws IOException {
-    this.selector = Selector.open();
-
-    this.handlers = new HashMap<>();
+  private EventLoop() {
+    this.clientConnections = new HashMap<>();
     this.callbacks = new HashSet<>();
     this.timeEvents = new PriorityQueue<>(Comparator.comparing(TimeEvent::getDeadline));
     this.isRunning = false;
@@ -79,12 +72,11 @@ public class EventLoop {
   }
 
   /**
-   * Most single-threaded applications have a single, global IOLoop. Use this method instead of passing around IOLoop
-   * instances throughout the code.
-   * @return a global IOLoop instance
-   * @throws IOException failed to create an IOLoop instance because of selector open IO exception
+   * Most single-threaded applications have a single, global EventLoop. Use this method instead of passing around
+   * EventLoop instances throughout the code.
+   * @return a global EventLoop instance
    */
-  public static EventLoop getInstance() throws IOException {
+  public static EventLoop getInstance() {
     if (instance == null) {
       instance = new EventLoop();
     }
@@ -93,26 +85,26 @@ public class EventLoop {
   }
 
   /**
-   * Registers the given handler to receive the given NIO events for this SelectionKey
-   * @param key A key we want to register a caller for interested ops
-   * @param socketHandler handler that we want to associate with the given key
+   * Registers the given TcpConnection to handle the given NIO events for this SelectionKey
+   * @param key A key we want to register a TcpConnection for interested ops
+   * @param tcpConnection connection that we want to associate with the given key, to handle read, write events
    */
-  public void addHandler(SelectionKey key, SocketHandler socketHandler) {
-    handlers.put(key, socketHandler);
+  public void registerTcpConnection(SelectionKey key, TcpConnection tcpConnection) {
+    clientConnections.put(key, tcpConnection);
   }
 
   /**
-   * Stop listening events for this SelectionKey. Also, remove the associated handler.
+   * Stop listening socket IO events for this SelectionKey. Also, remove the associated TcpConnection.
    * @param key We no longer want to receive events of this key's channel
    */
-  public void removeHandler(SelectionKey key) {
-    handlers.remove(key);
+  public void deregisterTcpConnection(SelectionKey key) {
+    clientConnections.remove(key);
     key.cancel();
   }
 
   /**
-   * Start the IO Loop. The loop will run until one of the IO handler calls stop(), which will make the loop stop after
-   * the current event iteration completes.
+   * Start the EventLoop. The loop will run until stop() is called, which will make the loop stop after the current
+   * event iteration completes.
    */
   public void start() {
     if (isStopped) {
@@ -120,6 +112,7 @@ public class EventLoop {
       return;
     }
 
+    // A forever loop that will execute callbacks, time events, socket IO events accordingly.
     isRunning = true;
     while (true) {
       var selectTimeout = DEFAULT_SELECT_TIMEOUT;
@@ -130,7 +123,7 @@ public class EventLoop {
         break;
       }
 
-      handleIOEvents(selectTimeout);
+      handleSocketEvents(selectTimeout);
     }
 
     // reset the stop flag so another start/stop pair can be issued
@@ -138,12 +131,12 @@ public class EventLoop {
   }
 
   /**
-   * Select ready keys in given time out. If there in any ready key, execute the associated handler.
+   * Select ready keys in given time out and handle accept, read, write socket events accordingly.
    * @param selectTimeout time out value used for select method
    */
-  private void handleIOEvents(long selectTimeout) {
+  private void handleSocketEvents(long selectTimeout) {
     try {
-      int readyKeysCount = selector.select(selectTimeout);
+      int readyKeysCount = TcpServer.getSelector().select(selectTimeout);
       if (readyKeysCount == 0) {
         return;
       }
@@ -152,31 +145,40 @@ public class EventLoop {
     }
 
     // Get iterator on set of keys with IO to process
-    Iterator<SelectionKey> keyIterator = selector.selectedKeys().iterator();
+    Iterator<SelectionKey> keyIterator = TcpServer.getSelector().selectedKeys().iterator();
     while (keyIterator.hasNext()) {
       SelectionKey key = keyIterator.next();
 
-      // Execute handler associated with the IO event
-      SocketHandler socketHandler = handlers.get(key);
-      if (socketHandler == null) {
-        logger.warn("No associated handler for SelectionKey = " + key);
+      if (key.equals(TcpServer.getServerKey())) {
+        TcpServer.handleServerSocketEvent();
       } else {
-        try {
-          socketHandler.handleEvent();
-          logger.info("Successfully apply handler for SelectionKey = " + key);
-        } catch (IOException e) {
-          logger.warn("Failed to apply handler for SelectionKey = " + key, e);
-        }
-        logger.info("Apply handler for SelectionKey = " + key);
+        handleOneClientSocketEvent(key);
       }
 
-      // Remove from set of selected keys
       keyIterator.remove();
     }
   }
 
   /**
-   * Execute the callbacks of all the overtime time events. Also, adjust the time out value for next select operation
+   * A client selection key is ready, process the read, write socket IO events.
+   * @param key Client Key that is ready for socket read, write events
+   */
+  private void handleOneClientSocketEvent(SelectionKey key) {
+    TcpConnection tcpConnection = clientConnections.get(key);
+    if (tcpConnection == null) {
+      logger.warn("This should not happen. Skipped because no associated TcpConnection for Key = " + key);
+    } else {
+      try {
+        tcpConnection.handleClientSocketEvent();
+        logger.info("Successfully handled socket event for Key = " + key);
+      } catch (IOException e) {
+        logger.warn("Failed to handle socket event for Key = " + key, e);
+      }
+    }
+  }
+
+  /**
+   * Execute the callbacks of all the overdue time events. Also, adjust the time out value for next select operation
    * @param selectTimeout current time out value for next select operation
    * @return new time out value for next select operation
    */
@@ -188,9 +190,10 @@ public class EventLoop {
       // timeEvents is a min-heap, so the root element has the earliest deadline. Keep polling and executing all the
       // overtime time events.
       while (!timeEvents.isEmpty() && timeEvents.peek().getDeadline() <= now) {
-        var timeoutEvent = timeEvents.poll();
-        if (timeoutEvent != null) {
-          timeoutEvent.getCallback().run(null);
+        var timeEvent = timeEvents.poll();
+        if (timeEvent != null) {
+          logger.info("Execute overdue time event = " + timeEvent);
+          timeEvent.getCallback().run(null);
         }
       }
 
@@ -240,14 +243,6 @@ public class EventLoop {
   }
 
   /**
-   * Returns true if this IOLoop is currently running
-   * @return if the current IOLoop is running
-   */
-  public Boolean isRunning() {
-    return isRunning;
-  }
-
-  /**
    * Add a new time event, whose callback should be executed at the deadline.
    * @param timeEvent the time event we want to add
    */
@@ -264,10 +259,10 @@ public class EventLoop {
   }
 
   /**
-   * Add a new callback, which will be executed on the next IO loop iteration, then wake up the selector.
-   * @param callback callback we want to trigger in the next IO loop
+   * Add a new callback, which will be executed on the next event loop iteration, then wake up the selector.
+   * @param callback callback we want to trigger in the next event loop
    */
-  public void addCallback(Callback callback) {
+  public void addCallback(TcpCallback callback) {
     callbacks.add(callback);
     wakeup();
   }
@@ -276,7 +271,7 @@ public class EventLoop {
    * Remove the given callback
    * @param callback callback we want to remove
    */
-  public void removeCallback(Callback callback) {
+  public void removeCallback(TcpCallback callback) {
     callbacks.remove(callback);
   }
 
@@ -285,10 +280,10 @@ public class EventLoop {
    * operation is currently in progress then the next invocation of a selection operation will return immediately.
    */
   private void wakeup() {
-    selector.wakeup();
+    TcpServer.getSelector().wakeup();
   }
 
-  public Selector getSelector() {
-    return selector;
+  public Map<SelectionKey, TcpConnection> getClientConnections() {
+    return clientConnections;
   }
 }

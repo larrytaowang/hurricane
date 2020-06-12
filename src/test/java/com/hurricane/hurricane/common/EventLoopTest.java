@@ -1,5 +1,6 @@
-package com.hurricane.hurricane;
+package com.hurricane.hurricane.common;
 
+import com.hurricane.hurricane.tcp.TcpServer;
 import java.util.LinkedList;
 import java.util.List;
 import org.junit.Assert;
@@ -8,7 +9,7 @@ import org.junit.Test;
 
 
 /**
- * Test if adding/removing callbacks and time events works. Network IO is covered in SocketHandlerTest.
+ * Test if adding/removing callbacks and time events works. Network IO is covered in TcpConnectionTest.
  */
 public class EventLoopTest {
   /**
@@ -33,6 +34,7 @@ public class EventLoopTest {
 
   @Before
   public void setUp() throws Exception {
+    TcpServer.init(null);
     this.eventLoop = EventLoop.getInstance();
     this.calledCount = 0;
     this.startTime = System.currentTimeMillis();
@@ -97,7 +99,7 @@ public class EventLoopTest {
 
   @Test
   public void removeCallback() {
-    List<Callback> callbacks = new LinkedList<>();
+    List<TcpCallback> callbacks = new LinkedList<>();
 
     // Add callbacks to the event loop
     var addCount = 10;
@@ -131,7 +133,7 @@ public class EventLoopTest {
    * Created a simple callback for testing.
    * @return a callback for testing.
    */
-  private Callback createCallback() {
+  private TcpCallback createCallback() {
     return args -> {
       calledCount += 1;
       eventLoop.stop();
