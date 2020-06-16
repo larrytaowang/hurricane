@@ -2,7 +2,6 @@ package com.hurricane.hurricane.tcp.connection;
 
 import com.google.common.primitives.Bytes;
 import com.hurricane.hurricane.common.EventLoop;
-import com.hurricane.hurricane.common.TimeEvent;
 import com.hurricane.hurricane.tcp.TcpAcceptManager;
 import com.hurricane.hurricane.tcp.TcpServer;
 import com.hurricane.hurricane.tcp.callback.TcpFlushHandler;
@@ -116,7 +115,7 @@ public class TcpConnectionTest {
     // Set up read handler for new accepted connection
     final int requiredBytesCount = 10;
     var callback = new TcpReadBytesHandler(requiredBytesCount, postReadEventCallback);
-    setUpTcpAcceptHandler(callback, null);
+    setUpReadTcpAcceptHandler(callback);
 
     // Spin up clients and send data to server in parallel
     this.clients = TcpUtil.prepareConnectedClients(CLIENT_COUNT);
@@ -144,7 +143,7 @@ public class TcpConnectionTest {
   public void readDelimiterEvent() throws IOException, InterruptedException {
     // Set up read handler for new accepted connection
     var callback = new TcpReadDelimiterHandler(DELIMITER, postReadEventCallback);
-    setUpTcpAcceptHandler(callback, null);
+    setUpReadTcpAcceptHandler(callback);
 
     // Spin up clients and send data to server in parallel
     this.clients = TcpUtil.prepareConnectedClients(CLIENT_COUNT);
@@ -163,6 +162,7 @@ public class TcpConnectionTest {
 
   @Test
   public void writeEvent() throws IOException, InterruptedException {
+    final byte[] testBytes = TEST_STRING.getBytes(StandardCharsets.UTF_8);
     TcpWriteCallback postCallback = (handler) -> {
       callbackTriggeredCount += 1;
       if (callbackTriggeredCount == CLIENT_COUNT) {
@@ -172,21 +172,12 @@ public class TcpConnectionTest {
 
     // Set up write handler for new accepted connection
     var callback = new TcpFlushHandler(postCallback);
-    setUpTcpAcceptHandler(null, callback);
+    setUpWriteTcpAcceptHandler(callback, testBytes);
 
     // Spin up clients and send data to server in parallel
-    final byte[] testBytes = TEST_STRING.getBytes(StandardCharsets.UTF_8);
     this.clients = TcpUtil.prepareConnectedClients(CLIENT_COUNT);
 
     clientsReceiveDataInParallel(latch);
-
-    eventLoop.addTimeEvent(new TimeEvent(System.currentTimeMillis() + 100, args -> {
-      logger.info("[Server] Callback");
-      for (var connection : eventLoop.getClientConnections().values()) {
-        logger.info("[Server] Write test data to tcp connection");
-        connection.prepareWriteData(testBytes);
-      }
-    }));
 
     // Start the event loop
     eventLoop.start();
@@ -251,12 +242,38 @@ public class TcpConnectionTest {
   }
 
   /**
-   * Set up accept handler for new connection.
-   * @param callback callback that will be associated with the READ event for the new connections.
+   * Set up accept handler for new connection, only interested in WRITE event.
+   * @param writeHandler handler that will be associated with the WRITE event for the new connections.
+   * @param writeData data that will be write to the client
    * @throws IOException some IO errors in TCP connecting operations
    */
-  private void setUpTcpAcceptHandler(TcpReadHandler callback, TcpWriteHandler tcpWriteHandler) throws IOException {
-    var acceptManager = new TcpAcceptManager(callback, tcpWriteHandler);
+  private void setUpWriteTcpAcceptHandler(TcpWriteHandler writeHandler, byte[] writeData) throws IOException {
+    var acceptManager = new TcpAcceptManager() {
+      @Override
+      protected void setUpTcpConnectionHandler(TcpConnection connection) {
+        connection.setWriteHandlerWithData(writeHandler, writeData);
+        EventLoop.getInstance().registerTcpConnection(connection.key, connection);
+      }
+    };
+
+    TcpServer.init(acceptManager);
+    TcpServer.bind(null);
+  }
+
+  /**
+   * Set up accept handler for new connection, only interested in READ.
+   * @param readHandler handler that will be associated with the READ event for the new connections.
+   * @throws IOException some IO errors in TCP connecting operations
+   */
+  private void setUpReadTcpAcceptHandler(TcpReadHandler readHandler) throws IOException {
+    var acceptManager = new TcpAcceptManager() {
+      @Override
+      protected void setUpTcpConnectionHandler(TcpConnection connection) {
+        connection.setReadHandler(readHandler);
+        EventLoop.getInstance().registerTcpConnection(connection.key, connection);
+      }
+    };
+
     TcpServer.init(acceptManager);
     TcpServer.bind(null);
   }

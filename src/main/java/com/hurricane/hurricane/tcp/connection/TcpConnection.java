@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
 import org.apache.log4j.Logger;
+import org.jetbrains.annotations.NotNull;
 
 
 /**
@@ -94,7 +95,7 @@ public class TcpConnection {
   public void handleClientSocketEvent() throws IOException {
     if (!key.isValid()) {
       logger.warn("Got events for invalid key = " + key);
-      closeTcpConnection();
+      closeConnection();
       return;
     }
 
@@ -111,7 +112,7 @@ public class TcpConnection {
    * Close this tcp connection. Also, remove the handler in eventloop, and remove the key from select
    * interested list. Run closeCallback if needed.
    */
-  protected void closeTcpConnection() {
+  public void closeConnection() {
     eventLoop.deregisterTcpConnection(key);
     key.cancel();
 
@@ -130,7 +131,7 @@ public class TcpConnection {
    * Check if the current Tcp connection is open
    * @return if the Tcp connection is open
    */
-  protected boolean isConnectionClosed() {
+  public boolean isConnectionClosed() {
     if (!socketChannel.isOpen()) {
       logger.warn("Closed channel = " + socketChannel);
       return true;
@@ -140,21 +141,9 @@ public class TcpConnection {
   }
 
   /**
-   * Append new data we want to write to the write cache.
-   * @param data new data we want to write to the socket channel.
-   */
-  public void prepareWriteData(byte[] data) {
-    key.interestOpsOr(SelectionKey.OP_WRITE);
-    writeManager.writeDataToCache(data);
-    if (writeManager.isCacheOverflow()) {
-      logger.warn("Reached maximum read cache size, close channel = " + socketChannel);
-      closeTcpConnection();
-    }
-  }
-
-  /**
-   * Set Tcp Read handler for this Tcp connection. When new handler is set, we should make sure this key registers
-   * the READ event.
+   * Set Tcp Read handler for this Tcp connection. When new handler is set, we should check if this can be triggered
+   * immediately, e.g., cache has enough data to process. If the handler cannot be run immediately, we need to make sure
+   * this key register the READ event.
    * @param readHandler set new handler for this Tcp connection
    */
   public void setReadHandler(TcpReadHandler readHandler) {
@@ -162,21 +151,63 @@ public class TcpConnection {
       return;
     }
 
-    this.readHandler = readHandler;
-    this.key.interestOpsOr(SelectionKey.OP_READ);
+    if (readHandler != null && readHandler.test(this)) {
+      readHandler.run(this);
+      this.readHandler = null;
+    } else {
+      this.readHandler = readHandler;
+      this.key.interestOpsOr(SelectionKey.OP_READ);
+    }
   }
 
   /**
-   * Set Tcp Write handler for this Tcp connection. We don't need to add interest in WRITE operation, prepareWriteData()
-   * is better place to do that
+   * Set Tcp Write handler for this Tcp connection. When new handler is set, we should check if this can be triggered
+   * immediately. Also, we don't need to add interest in WRITE operation, prepareWriteData() is better place to do it.
    * @param writeHandler TCP write handler
+   * @param data data that we want to send to the client
    */
-  public void setWriteHandler(TcpWriteHandler writeHandler) {
+  public void setWriteHandlerWithData(TcpWriteHandler writeHandler, @NotNull byte[] data) {
     if (isConnectionClosed()) {
       return;
     }
 
-    this.writeHandler = writeHandler;
+    // Write the data to the cache and register WRITE event
+    key.interestOpsOr(SelectionKey.OP_WRITE);
+    writeManager.writeDataToCache(data);
+    if (writeManager.isCacheOverflow()) {
+      logger.warn("Reached maximum read cache size, close channel = " + socketChannel);
+      closeConnection();
+    }
+
+    // Set write handler and run it immediately if needed
+    if (writeHandler != null && writeHandler.test(this)) {
+      writeHandler.run(this);
+      this.writeHandler = null;
+    } else {
+      this.writeHandler = writeHandler;
+    }
+  }
+
+  /**
+   * Check if the TCP connection still need to write data
+   * @return if the TCP connection still need to write data
+   */
+  public boolean isWriting() {
+    return !writeManager.isCacheEmpty();
+  }
+
+  /**
+   * Clear the write handler
+   */
+  public void clearWriteHandler() {
+    writeHandler = null;
+  }
+
+  /**
+   * Clear the write handler
+   */
+  public void clearReadHandler() {
+    readHandler = null;
   }
 
   public TcpReadHandler getReadHandler() {
@@ -193,5 +224,9 @@ public class TcpConnection {
 
   public TcpWriteManager getWriteManager() {
     return writeManager;
+  }
+
+  public SelectionKey getKey() {
+    return key;
   }
 }

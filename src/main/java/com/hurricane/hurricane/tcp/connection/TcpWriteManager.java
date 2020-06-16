@@ -69,7 +69,7 @@ public class TcpWriteManager {
       tcpConnection.socketChannel.write(writeByteBuffer);
     } catch (IOException e) {
       logger.warn("Failed to write data to client channel = " + tcpConnection.socketChannel, e);
-      tcpConnection.closeTcpConnection();
+      tcpConnection.closeConnection();
       throw e;
     }
     logger.info("Successfully send [" + writeByteBuffer.position() + 1 + "] bytes to client.");
@@ -81,7 +81,7 @@ public class TcpWriteManager {
     var writeCallback = tcpConnection.getWriteHandler();
     if (writeCallback != null && writeCallback.test(tcpConnection)) {
       writeCallback.run(tcpConnection);
-      tcpConnection.setWriteHandler(null);
+      tcpConnection.clearWriteHandler();
     }
   }
 

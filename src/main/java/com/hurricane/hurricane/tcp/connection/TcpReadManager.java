@@ -58,13 +58,13 @@ public class TcpReadManager {
       bytesRead = connection.socketChannel.read(readByteBuffer);
     } catch (IOException e) {
       logger.warn("Failed to read data from client channel = " + connection.socketChannel, e);
-      connection.closeTcpConnection();
+      connection.closeConnection();
       throw e;
     }
 
     // If client channel has reached end-of-stream, close the channel and return
     if (bytesRead == -1) {
-      connection.closeTcpConnection();
+      connection.closeConnection();
       return;
     }
 
@@ -86,14 +86,14 @@ public class TcpReadManager {
     // Check if the cache has overflowed
     if (readCache.size() > maxCacheSize) {
       logger.warn("Reached maximum read cache size, close channel = " + connection.socketChannel);
-      connection.closeTcpConnection();
+      connection.closeConnection();
       return;
     }
 
     // Run the callback if needed
     if (connection.getReadHandler() != null && connection.getReadHandler().test(connection)) {
       connection.getReadHandler().run(connection);
-      connection.setReadHandler(null);
+      connection.clearReadHandler();
     }
   }
 
@@ -129,5 +129,9 @@ public class TcpReadManager {
    */
   public List<Byte> getUnmodifiableReadCache() {
     return Collections.unmodifiableList(readCache);
+  }
+
+  public int getMaxCacheSize() {
+    return maxCacheSize;
   }
 }

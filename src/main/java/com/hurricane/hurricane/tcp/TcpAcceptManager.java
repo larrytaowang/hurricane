@@ -1,15 +1,9 @@
 package com.hurricane.hurricane.tcp;
 
-import com.hurricane.hurricane.common.EventLoop;
-import com.hurricane.hurricane.tcp.callback.TcpReadHandler;
-import com.hurricane.hurricane.tcp.callback.TcpWriteHandler;
-import com.hurricane.hurricane.tcp.connection.TcpReadManager;
 import com.hurricane.hurricane.tcp.connection.TcpConnection;
-import com.hurricane.hurricane.tcp.connection.TcpWriteManager;
 import java.io.IOException;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.ServerSocketChannel;
-import org.apache.log4j.Logger;
 
 
 /**
@@ -18,26 +12,9 @@ import org.apache.log4j.Logger;
  * This class processes server socket ACCEPT event. After acceping, the client TCP connection will be register with the
  * desired read write handler.
  */
-public class TcpAcceptManager {
-  private final static Logger logger = Logger.getLogger(TcpAcceptManager.class);
-
+public abstract class TcpAcceptManager {
   /**
-   * Read Callback attached to accepted Tcp connection
-   */
-  private TcpReadHandler readHandler;
-
-  /**
-   * Write Callback attached to accepted Tcp connection
-   */
-  private TcpWriteHandler writeHandler;
-
-  public TcpAcceptManager(TcpReadHandler readHandler, TcpWriteHandler writeHandler) {
-    this.readHandler = readHandler;
-    this.writeHandler = writeHandler;
-  }
-
-  /**
-   * Handle ACCEPT Socket IO event. The write handler and read handler will be attached to the new client connection.
+   * Handle ACCEPT Socket IO event. The subclass should define how to interact with the client TCP connection.
    * @throws IOException Some IO errors happen in accepting the client socket
    */
   protected void handleAcceptEvent() throws IOException {
@@ -48,11 +25,13 @@ public class TcpAcceptManager {
     var clientKey = clientChannel.register(selector, SelectionKey.OP_READ | SelectionKey.OP_WRITE);
 
     // Set read and write callback for the client channel
-    var clientConnection = new TcpConnection(clientKey, new TcpReadManager(), new TcpWriteManager());
-    clientConnection.setReadHandler(readHandler);
-    clientConnection.setWriteHandler(writeHandler);
-    EventLoop.getInstance().registerTcpConnection(clientKey, clientConnection);
-
-    logger.info("Accept and add read callback for client Key = " + clientKey);
+    var clientConnection = new TcpConnection(clientKey);
+    setUpTcpConnectionHandler(clientConnection);
   }
+
+  /**
+   * After a client TCP connection is accepted, this function defines how the server interact with the client connection.
+   * @param connection client TCP connection
+   */
+  abstract protected void setUpTcpConnectionHandler(TcpConnection connection);
 }
