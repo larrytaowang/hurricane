@@ -12,9 +12,9 @@ public abstract class TcpReadHandler {
   /**
    * When condition is met in test(), this callback should be triggered in run() method.
    */
-  protected TcpCallback tcpCallback;
+  protected TcpReadCallback tcpCallback;
 
-  protected TcpReadHandler(TcpCallback tcpCallback) {
+  protected TcpReadHandler(TcpReadCallback tcpCallback) {
     this.tcpCallback = tcpCallback;
   }
 

@@ -72,6 +72,7 @@ public class TcpWriteManager {
       tcpConnection.closeTcpConnection();
       throw e;
     }
+    logger.info("Successfully send [" + writeByteBuffer.position() + 1 + "] bytes to client.");
 
     // Compact this buffer in case of partial write and makes the byteBuffer ready for reading data from cache
     writeByteBuffer.compact();

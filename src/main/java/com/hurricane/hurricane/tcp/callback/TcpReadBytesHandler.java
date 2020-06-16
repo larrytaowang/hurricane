@@ -17,7 +17,7 @@ public class TcpReadBytesHandler extends TcpReadHandler {
    */
   private int requitedBytesCount;
 
-  public TcpReadBytesHandler(int requitedBytesCount, TcpCallback callback) {
+  public TcpReadBytesHandler(int requitedBytesCount, TcpReadCallback callback) {
     super(callback);
     this.requitedBytesCount = requitedBytesCount;
   }
@@ -31,7 +31,7 @@ public class TcpReadBytesHandler extends TcpReadHandler {
     logger.info("Run TcpReadBytesCallback, consumed bytesCount = " + requitedBytesCount);
     connection.getReadManager()
         .consume(requitedBytesCount)
-        .ifPresent(x -> tcpCallback.run(connection, new Object[]{x}));
+        .ifPresent(x -> tcpCallback.run(connection, x));
   }
 
   /**

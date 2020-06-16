@@ -27,11 +27,11 @@ public class TcpReadDelimiterHandler extends TcpReadHandler {
    */
   private int delimiterIndex;
 
-  public TcpReadDelimiterHandler(String delimiter, TcpCallback tcpCallback) {
+  public TcpReadDelimiterHandler(String delimiter, TcpReadCallback tcpCallback) {
     this(delimiter.getBytes(StandardCharsets.UTF_8), tcpCallback);
   }
 
-  public TcpReadDelimiterHandler(byte[] delimiter, TcpCallback tcpCallback) {
+  public TcpReadDelimiterHandler(byte[] delimiter, TcpReadCallback tcpCallback) {
     super(tcpCallback);
     this.delimiterIndex = -1;
 
@@ -51,7 +51,7 @@ public class TcpReadDelimiterHandler extends TcpReadHandler {
   public void run(TcpConnection tcpConnection) {
     var bytesCount = delimiterIndex + delimiter.size();
     logger.info("Run TcpReadDelimiterCallback, consumed bytesCount = " + bytesCount);
-    tcpConnection.getReadManager().consume(bytesCount).ifPresent(x -> tcpCallback.run(tcpConnection, new Object[]{x}));
+    tcpConnection.getReadManager().consume(bytesCount).ifPresent(x -> tcpCallback.run(tcpConnection, x));
   }
 
   /**

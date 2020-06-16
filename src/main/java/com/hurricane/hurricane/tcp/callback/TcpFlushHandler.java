@@ -12,7 +12,7 @@ import org.apache.log4j.Logger;
 public class TcpFlushHandler extends TcpWriteHandler {
   private final static Logger logger = Logger.getLogger(TcpFlushHandler.class);
 
-  public TcpFlushHandler(TcpCallback callback) {
+  public TcpFlushHandler(TcpWriteCallback callback) {
     super(callback);
   }
 
@@ -23,7 +23,7 @@ public class TcpFlushHandler extends TcpWriteHandler {
   @Override
   public void run(TcpConnection tcpConnection) {
     logger.info("All the data in write cache has been flushed, run Tcp callback");
-    callback.run(tcpConnection, new Object[]{});
+    callback.run(tcpConnection);
   }
 
   /**

@@ -44,7 +44,8 @@ public class TcpAcceptManager {
     // Accept client channel and register to the selector
     var clientChannel = ((ServerSocketChannel) TcpServer.getServerKey().channel()).accept();
     clientChannel.configureBlocking(false);
-    var clientKey = clientChannel.register(TcpServer.getServerKey().selector(), SelectionKey.OP_READ);
+    var selector = TcpServer.getServerKey().selector();
+    var clientKey = clientChannel.register(selector, SelectionKey.OP_READ | SelectionKey.OP_WRITE);
 
     // Set read and write callback for the client channel
     var clientConnection = new TcpConnection(clientKey, new TcpReadManager(), new TcpWriteManager());

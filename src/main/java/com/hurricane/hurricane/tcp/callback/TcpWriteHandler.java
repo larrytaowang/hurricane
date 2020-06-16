@@ -12,9 +12,9 @@ public abstract class TcpWriteHandler {
   /**
    * When condition is met in test(), this Tcp callback should be triggered in run() method.
    */
-  protected TcpCallback callback;
+  protected TcpWriteCallback callback;
 
-  protected TcpWriteHandler(TcpCallback callback) {
+  protected TcpWriteHandler(TcpWriteCallback callback) {
     this.callback = callback;
   }
 

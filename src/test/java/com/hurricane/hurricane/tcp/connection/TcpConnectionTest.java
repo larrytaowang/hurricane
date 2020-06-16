@@ -5,11 +5,12 @@ import com.hurricane.hurricane.common.EventLoop;
 import com.hurricane.hurricane.common.TimeEvent;
 import com.hurricane.hurricane.tcp.TcpAcceptManager;
 import com.hurricane.hurricane.tcp.TcpServer;
-import com.hurricane.hurricane.tcp.callback.TcpCallback;
 import com.hurricane.hurricane.tcp.callback.TcpFlushHandler;
 import com.hurricane.hurricane.tcp.callback.TcpReadBytesHandler;
+import com.hurricane.hurricane.tcp.callback.TcpReadCallback;
 import com.hurricane.hurricane.tcp.callback.TcpReadDelimiterHandler;
 import com.hurricane.hurricane.tcp.callback.TcpReadHandler;
+import com.hurricane.hurricane.tcp.callback.TcpWriteCallback;
 import com.hurricane.hurricane.tcp.callback.TcpWriteHandler;
 import com.hurricane.hurricane.utility.TcpUtil;
 import java.io.IOException;
@@ -81,7 +82,7 @@ public class TcpConnectionTest {
   /**
    * Callback that will be triggered if needed when there is a READ event.
    */
-  private TcpCallback postReadEventCallback;
+  private TcpReadCallback postReadEventCallback;
 
   /**
    * This latch is used for sync up with threads in pool. All threads should finish before main thread exists.
@@ -95,8 +96,8 @@ public class TcpConnectionTest {
     this.eventLoop = EventLoop.getInstance();
     this.latch = new CountDownLatch(CLIENT_COUNT);
 
-    this.postReadEventCallback = (handler, args) -> {
-      appendServerReadData((byte[]) args[0]);
+    this.postReadEventCallback = (handler, bytes) -> {
+      appendServerReadData(bytes);
       callbackTriggeredCount += 1;
       if (callbackTriggeredCount == CLIENT_COUNT) {
         eventLoop.stop();
@@ -162,7 +163,7 @@ public class TcpConnectionTest {
 
   @Test
   public void writeEvent() throws IOException, InterruptedException {
-    TcpCallback postCallback = (handler, args) -> {
+    TcpWriteCallback postCallback = (handler) -> {
       callbackTriggeredCount += 1;
       if (callbackTriggeredCount == CLIENT_COUNT) {
         eventLoop.stop();
