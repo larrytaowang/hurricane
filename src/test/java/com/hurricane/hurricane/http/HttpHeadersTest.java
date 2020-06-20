@@ -26,21 +26,21 @@ public class HttpHeadersTest {
     var headers = HttpHeaders.parse("Content-Type: text/html\r\n");
     headers.add("Set-Cookie", "A=B");
     headers.add("Set-Cookie", "C=D");
-    Assert.assertEquals(Arrays.asList("A=B", "C=D"), headers.getValues("Set-Cookie"));
+    Assert.assertEquals("A=B, C=D", headers.getValues("Set-Cookie"));
   }
 
   @Test
   public void parseLine() {
     var headers = new HttpHeaders();
     headers.parseLine("Content-Type: text/html");
-    Assert.assertEquals(Collections.singletonList("text/html"), headers.getValues("Content-Type"));
+    Assert.assertEquals("text/html", headers.getValues("Content-Type"));
   }
 
   @Test
   public void parse() {
     var headers = HttpHeaders.parse("Content-Type: text/html\r\nContent-Length: 42\r\n");
-    Assert.assertEquals(Collections.singletonList("text/html"), headers.getValues("Content-Type"));
-    Assert.assertEquals(Collections.singletonList("42"), headers.getValues("Content-Length"));
+    Assert.assertEquals("text/html", headers.getValues("Content-Type"));
+    Assert.assertEquals("42", headers.getValues("Content-Length"));
   }
 
   @Test

@@ -12,7 +12,6 @@ import org.jetbrains.annotations.NotNull;
 
 /**
  * @author larrytaowang
- *
  * A Class that maintains Http-Header-Case for all keys. Supports multiple values per key.
  */
 public class HttpHeaders implements Iterable<Map.Entry<String, List<String>>> {
@@ -41,9 +40,10 @@ public class HttpHeaders implements Iterable<Map.Entry<String, List<String>>> {
    * @param name name of the header
    * @return values of the given header as list. Return empty List if header does not exist.
    */
-  public List<String> getValues(String name) {
+  public String getValues(String name) {
     var normalizedName = HttpHeaders.normalizeName(name);
-    return headers.getOrDefault(normalizedName, new ArrayList<>());
+    var valueList = headers.getOrDefault(normalizedName, new ArrayList<>());
+    return String.join(", ", valueList);
   }
 
   /**
@@ -103,9 +103,23 @@ public class HttpHeaders implements Iterable<Map.Entry<String, List<String>>> {
     return result;
   }
 
+  /**
+   * Check if key is present in this header
+   * @param key header key
+   * @return if header key is present
+   */
+  public boolean contains(String key) {
+    return headers.containsKey(key);
+  }
+
   @NotNull
   @Override
   public Iterator<Map.Entry<String, List<String>>> iterator() {
     return headers.entrySet().iterator();
+  }
+
+  @Override
+  public String toString() {
+    return "HttpHeaders{" + "headers=" + headers + '}';
   }
 }
