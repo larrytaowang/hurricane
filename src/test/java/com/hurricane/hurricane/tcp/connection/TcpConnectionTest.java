@@ -3,22 +3,22 @@ package com.hurricane.hurricane.tcp.connection;
 import com.google.common.primitives.Bytes;
 import com.hurricane.hurricane.common.EventLoop;
 import com.hurricane.hurricane.common.TimeEvent;
-import com.hurricane.hurricane.tcp.TcpServer;
 import com.hurricane.hurricane.tcp.TcpAcceptManager;
-import com.hurricane.hurricane.tcp.callback.TcpFlushHandler;
+import com.hurricane.hurricane.tcp.TcpServer;
 import com.hurricane.hurricane.tcp.callback.TcpCallback;
+import com.hurricane.hurricane.tcp.callback.TcpFlushHandler;
 import com.hurricane.hurricane.tcp.callback.TcpReadBytesHandler;
 import com.hurricane.hurricane.tcp.callback.TcpReadDelimiterHandler;
 import com.hurricane.hurricane.tcp.callback.TcpReadHandler;
 import com.hurricane.hurricane.tcp.callback.TcpWriteHandler;
+import com.hurricane.hurricane.utility.TcpUtil;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import org.apache.log4j.Logger;
@@ -33,17 +33,22 @@ public class TcpConnectionTest {
   /**
    * A delimiter is necessary for testing readDelimiter callback.
    */
-  private final String delimiter = "\n";
+  public static final String DELIMITER = "\n";
 
   /**
    * Test data that will be transferred between clients and server
    */
-  private final String testString = "Some test text here" + delimiter;
+  public static final String TEST_STRING = "Some test text here" + DELIMITER;
 
   /**
    * Test bytes that will be transferred between clients and server
    */
-  private final byte[] testBytes = testString.getBytes(StandardCharsets.UTF_8);
+  public static final byte[] TEST_BYTES = TEST_STRING.getBytes(StandardCharsets.UTF_8);
+
+  /**
+   * We will create this count of clients for testing.
+   */
+  public static final int CLIENT_COUNT = 10;
 
   /**
    * A global event loop instance.
@@ -63,11 +68,6 @@ public class TcpConnectionTest {
   private List<Byte> serverReadData;
 
   /**
-   * We will create this count of clients for testing.
-   */
-  private final int clientCount = 1;
-
-  /**
    * A list of clients we created for testing.
    */
   private List<Socket> clients;
@@ -83,16 +83,22 @@ public class TcpConnectionTest {
    */
   private TcpCallback postReadEventCallback;
 
+  /**
+   * This latch is used for sync up with threads in pool. All threads should finish before main thread exists.
+   */
+  private CountDownLatch latch;
+
   @Before
   public void setUp() {
     this.serverReadData = new ArrayList<>();
-    this.executeService = Executors.newFixedThreadPool(clientCount + 1);
+    this.executeService = Executors.newFixedThreadPool(CLIENT_COUNT + 1);
     this.eventLoop = EventLoop.getInstance();
+    this.latch = new CountDownLatch(CLIENT_COUNT);
 
     this.postReadEventCallback = (handler, args) -> {
       appendServerReadData((byte[]) args[0]);
       callbackTriggeredCount += 1;
-      if (callbackTriggeredCount == clientCount) {
+      if (callbackTriggeredCount == CLIENT_COUNT) {
         eventLoop.stop();
       }
     };
@@ -105,23 +111,26 @@ public class TcpConnectionTest {
    * is as expected.
    */
   @Test
-  public void readBytesEvent() throws IOException {
+  public void readBytesEvent() throws IOException, InterruptedException {
     // Set up read handler for new accepted connection
     final int requiredBytesCount = 10;
     var callback = new TcpReadBytesHandler(requiredBytesCount, postReadEventCallback);
     setUpTcpAcceptHandler(callback, null);
 
     // Spin up clients and send data to server in parallel
-    prepareConnectedClients();
-    clientSendData();
+    this.clients = TcpUtil.prepareConnectedClients(CLIENT_COUNT);
+    clientsSendDataInParallel(latch);
 
     // Start the event loop
     eventLoop.start();
 
     // When the event loop finishes, check if the server receives data as expected
-    final byte[] subTestBytes = Arrays.copyOfRange(testBytes, 0, requiredBytesCount);
-    final byte[] expectedBytes = repeatArray(subTestBytes, clientCount);
+    final byte[] subTestBytes = Arrays.copyOfRange(TEST_BYTES, 0, requiredBytesCount);
+    final byte[] expectedBytes = repeatArray(subTestBytes, CLIENT_COUNT);
     Assert.assertArrayEquals(expectedBytes, Bytes.toArray(serverReadData));
+
+    // wait for all threads in the pool finish
+    latch.await();
   }
 
   /**
@@ -131,28 +140,31 @@ public class TcpConnectionTest {
    * 'serverReadData' is as expected.
    */
   @Test
-  public void readDelimiterEvent() throws IOException {
+  public void readDelimiterEvent() throws IOException, InterruptedException {
     // Set up read handler for new accepted connection
-    var callback = new TcpReadDelimiterHandler(delimiter, postReadEventCallback);
+    var callback = new TcpReadDelimiterHandler(DELIMITER, postReadEventCallback);
     setUpTcpAcceptHandler(callback, null);
 
     // Spin up clients and send data to server in parallel
-    prepareConnectedClients();
-    clientSendData();
+    this.clients = TcpUtil.prepareConnectedClients(CLIENT_COUNT);
+    clientsSendDataInParallel(latch);
 
     // Start the event loop
     eventLoop.start();
 
     // When the event loop finishes, check if the server receives data as expected
-    final byte[] expectedBytes = repeatArray(testBytes, clientCount);
+    final byte[] expectedBytes = repeatArray(TEST_BYTES, CLIENT_COUNT);
     Assert.assertArrayEquals(expectedBytes, Bytes.toArray(serverReadData));
+
+    // wait for all threads in the pool finish
+    latch.await();
   }
 
   @Test
-  public void writeEvent() throws IOException {
+  public void writeEvent() throws IOException, InterruptedException {
     TcpCallback postCallback = (handler, args) -> {
       callbackTriggeredCount += 1;
-      if (callbackTriggeredCount == clientCount) {
+      if (callbackTriggeredCount == CLIENT_COUNT) {
         eventLoop.stop();
       }
     };
@@ -162,9 +174,10 @@ public class TcpConnectionTest {
     setUpTcpAcceptHandler(null, callback);
 
     // Spin up clients and send data to server in parallel
-    final byte[] testBytes = testString.getBytes(StandardCharsets.UTF_8);
-    prepareConnectedClients();
-    clientReceiveData();
+    final byte[] testBytes = TEST_STRING.getBytes(StandardCharsets.UTF_8);
+    this.clients = TcpUtil.prepareConnectedClients(CLIENT_COUNT);
+
+    clientsReceiveDataInParallel(latch);
 
     eventLoop.addTimeEvent(new TimeEvent(System.currentTimeMillis() + 100, args -> {
       logger.info("[Server] Callback");
@@ -177,42 +190,35 @@ public class TcpConnectionTest {
     // Start the event loop
     eventLoop.start();
 
-    Assert.assertEquals(clientCount, callbackTriggeredCount);
+    Assert.assertEquals(CLIENT_COUNT, callbackTriggeredCount);
+
+    // wait for all threads in the pool finish
+    latch.await();
   }
 
   /**
-   * Each client will send data to server in parallel.
+   * Each client start to send test data. When expected data is sent, decrease the latch.
+   * @param latch this is used to make sure main thread does not exit before all threads in pool finish.
    */
-  private void clientSendData() {
+  private void clientsSendDataInParallel(CountDownLatch latch) {
     for (var client : clients) {
       executeService.submit(() -> {
-        OutputStream outputStream = client.getOutputStream();
-        logger.info("[Client-" + clients.indexOf(client) + "] Send test bytes, count = " + testBytes.length);
-        outputStream.write(testBytes);
-        return testBytes;
+        TcpUtil.clientSendData(client, TEST_BYTES);
+        latch.countDown();
+        return TEST_BYTES;
       });
     }
   }
 
   /**
-   * Each client will receive data from server in parallel.
+   * Each client start to receive test data. When expected data is received, decrease the latch.
+   * @param latch this is used to make sure main thread does not exit before all threads in pool finish.
    */
-  @SuppressWarnings("ResultOfMethodCallIgnored")
-  private void clientReceiveData() {
-
+  private void clientsReceiveDataInParallel(CountDownLatch latch) {
     for (var client : clients) {
       executeService.submit(() -> {
-        InputStream inputStream = client.getInputStream();
-
-        // Receive the test string from the server
-        int totalBytesReceived = 0;
-        byte[] receivedData = new byte[testBytes.length];
-        while (totalBytesReceived < testBytes.length) {
-          inputStream.read(receivedData, totalBytesReceived, testBytes.length - totalBytesReceived);
-        }
-
-        logger.info("[Client-" + clients.indexOf(client) + "] Received completed test data from server");
-        Assert.assertArrayEquals(testBytes, receivedData);
+        TcpUtil.clientShouldReceiveData(client, TEST_BYTES);
+        latch.countDown();
         return null;
       });
     }
@@ -241,20 +247,6 @@ public class TcpConnectionTest {
       repeatedBytes[i] = bytes[i % bytes.length];
     }
     return repeatedBytes;
-  }
-
-  /**
-   * Prepare a bunch of clients which successfully connect to the server.
-   * @throws IOException some IO errors in TCP connecting operations
-   */
-  private void prepareConnectedClients() throws IOException {
-    clients = new ArrayList<>();
-    var serverSocket = TcpServer.getServerSocketChannel().socket();
-    for (int i = 0; i < clientCount; i++) {
-      var client = new Socket(serverSocket.getInetAddress(), serverSocket.getLocalPort());
-      this.clients.add(client);
-      logger.info("[Client-" + i + "] Connect to server");
-    }
   }
 
   /**

@@ -10,7 +10,6 @@ import org.apache.log4j.Logger;
 
 /**
  * @author larrytaowang
- *
  * This class processes client socket WRITE event and maintains read cache.
  */
 public class TcpWriteManager {
@@ -52,25 +51,20 @@ public class TcpWriteManager {
    */
   protected void handleWriteEvent(TcpConnection tcpConnection) throws IOException {
     // If there is no data in byteBuffer or cache, we should stop handling the write event
-    if (!writeByteBuffer.hasRemaining() && writeCache.isEmpty()) {
+    var isEmptyByteBuffer = writeByteBuffer.position() == 0;
+    if (isEmptyByteBuffer && writeCache.isEmpty()) {
       logger.info("Current key = " + tcpConnection.key + " has no data to write, remove interest of WRITE");
       tcpConnection.key.interestOpsAnd(~SelectionKey.OP_WRITE);
       return;
     }
 
-    // If byteBuffer has no data to write, clear the buffer and read the data from cache
-    if (!writeByteBuffer.hasRemaining()) {
-      writeByteBuffer.clear();
-
-      // Write as much data as possible to byteBuffer
-      while (writeByteBuffer.hasRemaining() && !writeCache.isEmpty()) {
-        writeByteBuffer.put(writeCache.poll());
-      }
-
-      writeByteBuffer.flip();
+    // Transfer as much data as possible from cache to byteBuffer
+    while (writeByteBuffer.hasRemaining() && !writeCache.isEmpty()) {
+      writeByteBuffer.put(writeCache.poll());
     }
 
     // Write data in byteBuffer to client channel
+    writeByteBuffer.flip();
     try {
       tcpConnection.socketChannel.write(writeByteBuffer);
     } catch (IOException e) {
@@ -78,6 +72,9 @@ public class TcpWriteManager {
       tcpConnection.closeTcpConnection();
       throw e;
     }
+
+    // Compact this buffer in case of partial write and makes the byteBuffer ready for reading data from cache
+    writeByteBuffer.compact();
 
     // Trigger callback if needed
     var writeCallback = tcpConnection.getWriteHandler();
