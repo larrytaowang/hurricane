@@ -23,6 +23,8 @@ public class Constant {
   public static final String HTTP_METHOD_HEAD = "HEAD";
   public static final String HTTP_METHOD_GET = "GET";
   public static final String HTTP_METHOD_POST = "POST";
+  public static final String HTTP_METHOD_DELETE = "DELETE";
+  public static final String HTTP_METHOD_PUT = "PUT";
 
   public static final String HTTP_APPLICATION_X_WWW_FORM_URLENCODED = "application/x-www-form-urlencoded";
 
