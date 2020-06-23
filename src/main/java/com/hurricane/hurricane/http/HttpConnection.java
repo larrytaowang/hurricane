@@ -12,9 +12,8 @@ import static com.hurricane.hurricane.common.Constant.*;
 
 
 /**
- * @author larrytaowang
- * This class handles a connection to an Http client, executing Http requests. We parse HTTP headers and bodies, and
- * execute the request callback until the HTTP connection is closed.
+ * @author larrytaowang This class handles a connection to an Http client, executing Http requests. We parse HTTP
+ * headers and bodies, and execute the request callback until the HTTP connection is closed.
  */
 public class HttpConnection {
   private final static Logger logger = Logger.getLogger(HttpConnection.class);
@@ -63,6 +62,7 @@ public class HttpConnection {
 
   /**
    * Write the data to client asynchronously. When finished, execute the complete callback.
+   *
    * @param data data write to client
    */
   public void write(byte[] data) {
@@ -71,6 +71,7 @@ public class HttpConnection {
 
   /**
    * Callback that will be run when write finishes. Finish the request if needed.
+   *
    * @param connection TCP connection that is used for this HTTP connection
    */
   private void onWriteCompleteCallback(TcpConnection connection) {
@@ -87,7 +88,8 @@ public class HttpConnection {
    *   <li>finish parsing Http header and no more data for Http body</li>
    *   <li>finish parsing Http header and Http body</li>
    * </ul>
-   * @param connection tcp connection of this Http connection
+   *
+   * @param connection      tcp connection of this Http connection
    * @param httpHeaderBytes bytes received to construct a Http header
    */
   protected void onHttpHeaderReceived(TcpConnection connection, byte[] httpHeaderBytes) {
@@ -106,6 +108,7 @@ public class HttpConnection {
 
   /**
    * Check the CONTENT-LENGTH filed to see if parsing HTTP request body is necessary.
+   *
    * @param request HTTP request
    * @return if the server need to parse the HTTP request body
    */
@@ -146,7 +149,8 @@ public class HttpConnection {
 
   /**
    * This function is called to parse the HTTP request body when server receives complete data.
-   * @param connection tcp connection of that HTTP connection
+   *
+   * @param connection    tcp connection of that HTTP connection
    * @param httpBodyBytes bytes for complete HTTP request body
    */
   private void onHttpBodyReceived(TcpConnection connection, byte[] httpBodyBytes) {

@@ -1,5 +1,13 @@
 package com.hurricane.hurricane.http;
 
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import org.apache.http.NameValuePair;
+import org.apache.http.client.utils.URLEncodedUtils;
 import org.apache.log4j.Logger;
 
 import static com.hurricane.hurricane.common.Constant.*;
@@ -27,6 +35,16 @@ public class HttpRequest {
   private String uri;
 
   /**
+   * Query Key Value pairs in the URI
+   */
+  private Map<String, String> queryArgs;
+
+  /**
+   * The path component of this request
+   */
+  private String path;
+
+  /**
    * Version of Http request, parsed from start line. Version higher than 1.1 is not supported.
    */
   private String version;
@@ -45,12 +63,44 @@ public class HttpRequest {
     this.httpConnection = connection;
     this.method = method;
     this.uri = uri;
+    parseUri(uri);
+
     this.version = version;
     this.httpHeaders = httpHeaders;
   }
 
   /**
+   * Parse the uri
+   *
+   * @param uri uri to parse
+   */
+  private void parseUri(String uri) {
+    // Parse the path component
+    var uriDelimiter = '?';
+    if (uri.indexOf(uriDelimiter) != -1) {
+      this.path = uri.substring(0, uri.indexOf(uriDelimiter));
+    } else {
+      this.path = uri;
+    }
+
+    // Parse the query arguments
+    List<NameValuePair> params;
+    try {
+      params = URLEncodedUtils.parse(new URI(uri), StandardCharsets.UTF_8);
+    } catch (URISyntaxException e) {
+      logger.warn("Malformed URI = " + uri);
+      return;
+    }
+
+    this.queryArgs = new HashMap<>();
+    for (var param : params) {
+      this.queryArgs.put(param.getName(), param.getValue());
+    }
+  }
+
+  /**
    * Return true if this request supports HTTP/1.1 semantics
+   *
    * @return if this request supports HTTP/1.1
    */
   public boolean supportHttpOneDotOne() {
@@ -59,6 +109,7 @@ public class HttpRequest {
 
   /**
    * Check the headers to see if the server should disconnect after the request is finished.
+   *
    * @return If the request should be disconnected after finished.
    */
   public boolean disconnectWhenFinish() {
@@ -78,8 +129,9 @@ public class HttpRequest {
 
   /**
    * Parse the string content and construct a Http request with headers
+   *
    * @param httpRequestLines String content of the Http request
-   * @param httpConnection The Http connection the new request belongs to
+   * @param httpConnection   The Http connection the new request belongs to
    * @return A Http request object generated from the given content.
    */
   public static HttpRequest parseHttpRequestHeaders(String httpRequestLines, HttpConnection httpConnection) {
@@ -111,6 +163,7 @@ public class HttpRequest {
 
   /**
    * Parse the HTTP body with the given data. Right now only "application/x-www-form-urlencoded" is supported.
+   *
    * @param data bytes of the HTTP body
    */
   public void parseBody(byte[] data) {
@@ -148,5 +201,13 @@ public class HttpRequest {
 
   public HttpBody getHttpBody() {
     return httpBody;
+  }
+
+  public String getPath() {
+    return path;
+  }
+
+  public Map<String, String> getQueryArgs() {
+    return queryArgs;
   }
 }

@@ -127,4 +127,12 @@ public class UrlSpec {
   public String getFormattedPath() {
     return formattedPath;
   }
+
+  public String getName() {
+    return name;
+  }
+
+  public Pattern getPattern() {
+    return pattern;
+  }
 }
