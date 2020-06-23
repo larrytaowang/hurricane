@@ -145,7 +145,7 @@ public class HttpRequest {
 
     var startLine = httpRequestLines.substring(0, delimiterIndex);
     var fields = startLine.split(" ");
-    var methodOptional = HttpMethod.fromString(fields[0]);
+    var methodOptional = HttpMethod.fromString(fields[0].strip());
     if (methodOptional.isEmpty()) {
       throw new HttpException(HttpStatus.BAD_REQUEST);
     }

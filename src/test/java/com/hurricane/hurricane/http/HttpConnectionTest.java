@@ -3,11 +3,15 @@ package com.hurricane.hurricane.http;
 import com.hurricane.hurricane.common.Constant;
 import com.hurricane.hurricane.common.EventLoop;
 import com.hurricane.hurricane.utility.TcpUtil;
+import com.hurricane.hurricane.web.Application;
 import com.hurricane.hurricane.web.RequestHandler;
+import com.hurricane.hurricane.web.UrlSpec;
 import java.io.IOException;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -70,7 +74,9 @@ public class HttpConnectionTest {
       }
     };
 
-    spinUpHttpServer(callback);
+    var application = new Application(Collections.singletonList(new UrlSpec(".*", callback)));
+
+    spinUpHttpServer(application);
     clients = TcpUtil.prepareConnectedClients(CLIENT_COUNT);
 
     // Clients send data of test HTTP header to the HTTP server
@@ -119,7 +125,8 @@ public class HttpConnectionTest {
       }
     };
 
-    spinUpHttpServer(callback);
+    var application = new Application(Collections.singletonList(new UrlSpec(".*", callback)));
+    spinUpHttpServer(application);
     clients = TcpUtil.prepareConnectedClients(CLIENT_COUNT);
 
     // Clients send data of test HTTP request header + body to the HTTP server

@@ -5,7 +5,7 @@ import com.hurricane.hurricane.tcp.callback.TcpFlushHandler;
 import com.hurricane.hurricane.tcp.callback.TcpReadBytesHandler;
 import com.hurricane.hurricane.tcp.callback.TcpReadDelimiterHandler;
 import com.hurricane.hurricane.tcp.connection.TcpConnection;
-import com.hurricane.hurricane.web.RequestHandler;
+import com.hurricane.hurricane.web.Application;
 import java.nio.charset.StandardCharsets;
 import org.apache.log4j.Logger;
 
@@ -40,17 +40,17 @@ public class HttpConnection {
   private boolean requestFinished;
 
   /**
-   * This callback is called when the whole request has been parsed. Note that it should be only called once. If there
-   * are both Http header and body, we should only call it after the body is parsed.
+   * This application's request handler is called when the whole request has been parsed. Note that it should be only
+   * called once. If there are both Http header and body, we should only call it after the body is parsed.
    */
-  private final RequestHandler requestHandler;
+  private final Application application;
 
-  public HttpConnection(TcpConnection tcpConnection, RequestHandler requestHandler) {
+  public HttpConnection(TcpConnection tcpConnection, Application application) {
     this.tcpConnection = tcpConnection;
     EventLoop.getInstance().registerTcpConnection(tcpConnection.getKey(), tcpConnection);
 
     this.isNoKeepAlive = false;
-    this.requestHandler = requestHandler;
+    this.application = application;
   }
 
   /**
@@ -102,8 +102,8 @@ public class HttpConnection {
 
     // When we finish parsing request, call the callback. However, we want to call the callback exactly once. Therefore,
     // If the callback is called when parsing the Http body, we should not call it again.
-    if (!isBodyParsed && requestHandler != null) {
-      requestHandler.run(this, httpRequest);
+    if (!isBodyParsed && application != null) {
+      application.run(this, httpRequest);
     }
   }
 
@@ -156,8 +156,8 @@ public class HttpConnection {
    */
   private void onHttpBodyReceived(TcpConnection connection, byte[] httpBodyBytes) {
     httpRequest.parseBody(httpBodyBytes);
-    if (requestHandler != null) {
-      requestHandler.run(this, httpRequest);
+    if (application != null) {
+      application.run(this, httpRequest);
     }
   }
 

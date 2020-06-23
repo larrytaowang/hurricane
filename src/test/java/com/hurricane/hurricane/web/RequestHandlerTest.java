@@ -7,6 +7,8 @@ import com.hurricane.hurricane.utility.TcpUtil;
 import java.io.IOException;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -21,7 +23,7 @@ import static com.hurricane.hurricane.utility.HttpUtil.*;
 public class RequestHandlerTest {
 
   /**
-   *  We will create this count of clients for testing.
+   * We will create this count of clients for testing.
    */
   public static final int CLIENT_COUNT = 10;
 
@@ -36,8 +38,8 @@ public class RequestHandlerTest {
   private int servedClientCount;
 
   /**
-   * We need to spin up a bunch of clients interacting with servers. A client is wrapped in a runnable and submitted
-   * to the executor server.
+   * We need to spin up a bunch of clients interacting with servers. A client is wrapped in a runnable and submitted to
+   * the executor server.
    */
   private ExecutorService executeService;
 
@@ -66,7 +68,8 @@ public class RequestHandlerTest {
       }
     };
 
-    spinUpHttpServer(requestHandler);
+    var application = new Application(Collections.singletonList(new UrlSpec(".*", requestHandler)));
+    spinUpHttpServer(application);
     clients = TcpUtil.prepareConnectedClients(CLIENT_COUNT);
 
     // Clients send data of test HTTP header to the HTTP server

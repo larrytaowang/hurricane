@@ -74,7 +74,7 @@ public class TcpReadManager {
     }
 
     // Fetch data from client channel and store in the read cache.
-    byte[] readBytes = new byte[readByteBuffer.position() + 1];
+    byte[] readBytes = new byte[readByteBuffer.position()];
     readByteBuffer.rewind();
     readByteBuffer.get(readBytes);
     for (var readByte : readBytes) {

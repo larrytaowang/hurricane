@@ -56,12 +56,15 @@ public class HttpHeaders implements Iterable<Map.Entry<String, List<String>>> {
    * @param line A line contains Key-Value of header, separated by a colon
    */
   public void parseLine(String line) {
-    var keyValue = line.split(":");
-    if (keyValue.length != 2) {
+    var splitIndex = line.indexOf(':');
+    if (splitIndex == -1) {
       throw new IllegalArgumentException("Illegal header line, the format should be Key:Value, the input is = " + line);
     }
 
-    add(normalizeName(keyValue[0]), keyValue[1].strip());
+    var key = line.substring(0, splitIndex).strip();
+    var value = line.substring(splitIndex + 1).strip();
+
+    add(normalizeName(key), value);
   }
 
   /**

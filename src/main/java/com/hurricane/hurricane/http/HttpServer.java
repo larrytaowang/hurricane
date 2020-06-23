@@ -3,7 +3,7 @@ package com.hurricane.hurricane.http;
 import com.hurricane.hurricane.tcp.TcpAcceptManager;
 import com.hurricane.hurricane.tcp.TcpServer;
 import com.hurricane.hurricane.tcp.connection.TcpConnection;
-import com.hurricane.hurricane.web.RequestHandler;
+import com.hurricane.hurricane.web.Application;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -27,9 +27,9 @@ public class HttpServer {
   private static HttpServer httpServer;
 
   /**
-   * Callback will be executed when finishing parsing Http request
+   * Application whose request handler will be executed when finishing parsing Http request
    */
-  private RequestHandler requestCallback;
+  private Application application;
 
   private HttpServer() {
   }
@@ -56,7 +56,7 @@ public class HttpServer {
     var httpAcceptManager = new TcpAcceptManager() {
       @Override
       protected void setUpTcpConnectionHandler(TcpConnection tcpConnection) {
-        var newHttpConnection = new HttpConnection(tcpConnection, requestCallback);
+        var newHttpConnection = new HttpConnection(tcpConnection, application);
         newHttpConnection.activate();
       }
     };
@@ -82,7 +82,7 @@ public class HttpServer {
     listen(port, "localhost");
   }
 
-  public void setRequestCallback(RequestHandler requestCallback) {
-    this.requestCallback = requestCallback;
+  public void setApplication(Application application) {
+    this.application = application;
   }
 }
