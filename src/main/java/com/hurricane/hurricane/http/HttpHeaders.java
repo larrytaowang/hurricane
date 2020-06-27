@@ -1,5 +1,6 @@
 package com.hurricane.hurricane.http;
 
+import com.hurricane.hurricane.common.Constant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -110,6 +111,19 @@ public class HttpHeaders implements Iterable<Map.Entry<String, List<String>>> {
    */
   public boolean contains(String key) {
     return headers.containsKey(key);
+  }
+
+  /**
+   * Return formatted Headers values
+   * @return headers values in String
+   */
+  public String getContent() {
+    var stringBuilder = new StringBuilder();
+    for (var key: headers.keySet()) {
+      stringBuilder.append(key).append(": ").append(getValues(key)).append(Constant.HTTP_HEADER_KEY_VALUE_DELIMITER);
+    }
+
+    return stringBuilder.toString();
   }
 
   @NotNull

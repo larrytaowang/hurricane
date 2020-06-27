@@ -1,7 +1,6 @@
 package com.hurricane.hurricane.http;
 
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashSet;
 import org.junit.Assert;
 import org.junit.Test;
@@ -52,5 +51,13 @@ public class HttpHeadersTest {
     }
 
     Assert.assertTrue(keySet.isEmpty());
+  }
+
+  @Test
+  public void getContent() {
+    var headersString = "Content-Type: text/html\r\nSet-Cookie: A=B, C=D\r\n";
+    var headers = HttpHeaders.parse(headersString);
+    var possibleHeaderString = "Set-Cookie: A=B, C=D\r\nContent-Type: text/html\r\n";
+    Assert.assertTrue(headers.getContent().equals(headersString) || headers.getContent().equals(possibleHeaderString));
   }
 }
