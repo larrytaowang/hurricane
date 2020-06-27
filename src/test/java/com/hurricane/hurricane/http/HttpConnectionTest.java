@@ -83,7 +83,7 @@ public class HttpConnectionTest {
     Assert.assertEquals(CLIENT_COUNT, servedConnections.size());
     for (var connection : servedConnections) {
       var httpRequest = connection.getHttpRequest();
-      Assert.assertEquals("GET", httpRequest.getMethod());
+      Assert.assertEquals(HttpMethod.GET, httpRequest.getMethod());
       Assert.assertEquals("/hurricane/test/", httpRequest.getUri());
       Assert.assertEquals("HTTP/1.1", httpRequest.getVersion());
 

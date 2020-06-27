@@ -1,10 +1,10 @@
 package com.hurricane.hurricane.web;
 
+import com.hurricane.hurricane.http.HttpMethod;
 import com.hurricane.hurricane.http.HttpRequestCallback;
 import java.util.Arrays;
-import java.util.List;
-
-import static com.hurricane.hurricane.common.Constant.*;
+import java.util.HashSet;
+import java.util.Set;
 
 
 /**
@@ -17,7 +17,7 @@ public abstract class RequestHandler implements HttpRequestCallback {
    * @param method a HTTP handler
    * @return if a method is supported in this handler
    */
-  protected boolean isMethodSupported(String method) {
+  protected boolean isMethodSupported(HttpMethod method) {
     return getSupportedMethods().contains(method);
   }
 
@@ -25,7 +25,8 @@ public abstract class RequestHandler implements HttpRequestCallback {
    * If a subclass wants to support more methods than the standard GET/HEAD/POST, it should override this method
    * @return All the HTTP methods that are supported in this handler
    */
-  protected List<String> getSupportedMethods() {
-    return Arrays.asList(HTTP_METHOD_GET, HTTP_METHOD_HEAD, HTTP_METHOD_POST, HTTP_METHOD_DELETE, HTTP_METHOD_PUT);
+  protected Set<HttpMethod> getSupportedMethods() {
+    var methods = Arrays.asList(HttpMethod.values());
+    return new HashSet<>(methods);
   }
 }

@@ -20,12 +20,6 @@ public class Constant {
   public static final String HTTP_HEADER_DELIMITER = "\r\n\r\n";
   public static final String HTTP_HEADER_KEY_VALUE_DELIMITER = "\r\n";
 
-  public static final String HTTP_METHOD_HEAD = "HEAD";
-  public static final String HTTP_METHOD_GET = "GET";
-  public static final String HTTP_METHOD_POST = "POST";
-  public static final String HTTP_METHOD_DELETE = "DELETE";
-  public static final String HTTP_METHOD_PUT = "PUT";
-
   public static final String HTTP_APPLICATION_X_WWW_FORM_URLENCODED = "application/x-www-form-urlencoded";
 
   public static final String HTTP_100_CONTINUE_RESPONSE = "HTTP/1.1 100 (Continue)\r\n\r\n";

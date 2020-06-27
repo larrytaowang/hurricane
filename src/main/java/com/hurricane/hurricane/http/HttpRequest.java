@@ -27,7 +27,7 @@ public class HttpRequest {
   /**
    * Method of the Http request, parsed from start line.
    */
-  private String method;
+  private HttpMethod method;
 
   /**
    * Uri of the Http request, parsed from start line.
@@ -59,7 +59,8 @@ public class HttpRequest {
    */
   private HttpBody httpBody;
 
-  public HttpRequest(HttpConnection connection, String method, String uri, String version, HttpHeaders httpHeaders) {
+  public HttpRequest(HttpConnection connection, HttpMethod method, String uri, String version,
+      HttpHeaders httpHeaders) {
     this.httpConnection = connection;
     this.method = method;
     this.uri = uri;
@@ -120,7 +121,7 @@ public class HttpRequest {
       return headerConnectionValue.equals(HTTP_HEADER_CONNECTION_VALUE_CONNECTION_CLOSE);
     } else if (httpHeaders.contains(HTTP_HEADER_KEY_CONTENT_LENGTH)) {
       return headerConnectionValue.equals(HTTP_HEADER_CONNECTION_VALUE_KEEP_ALIVE);
-    } else if (method.equals(HTTP_METHOD_HEAD) || method.equals(HTTP_METHOD_GET)) {
+    } else if (method.equals(HttpMethod.HEAD) || method.equals(HttpMethod.GET)) {
       return headerConnectionValue.equals(HTTP_HEADER_CONNECTION_VALUE_KEEP_ALIVE);
     } else {
       return true;
@@ -134,7 +135,8 @@ public class HttpRequest {
    * @param httpConnection   The Http connection the new request belongs to
    * @return A Http request object generated from the given content.
    */
-  public static HttpRequest parseHttpRequestHeaders(String httpRequestLines, HttpConnection httpConnection) {
+  public static HttpRequest parseHttpRequestHeaders(String httpRequestLines, HttpConnection httpConnection)
+      throws HttpException {
     // Parse First Line of Http Request
     var delimiterIndex = httpRequestLines.indexOf(HTTP_HEADER_KEY_VALUE_DELIMITER);
     if (delimiterIndex == -1) {
@@ -143,7 +145,12 @@ public class HttpRequest {
 
     var startLine = httpRequestLines.substring(0, delimiterIndex);
     var fields = startLine.split(" ");
-    var method = fields[0];
+    var methodOptional = HttpMethod.fromString(fields[0]);
+    if (methodOptional.isEmpty()) {
+      throw new HttpException(HttpStatus.BAD_REQUEST);
+    }
+    var method = methodOptional.get();
+
     var uri = fields[1];
     var version = fields[2];
 
@@ -170,7 +177,7 @@ public class HttpRequest {
     httpBody = new HttpBody(data);
     var contentType = getHttpHeaders().getValues(HTTP_HEADER_KEY_CONTENT_TYPE);
 
-    if (getMethod().equals(HTTP_METHOD_POST)) {
+    if (getMethod().equals(HttpMethod.POST)) {
       if (contentType.startsWith(HTTP_APPLICATION_X_WWW_FORM_URLENCODED)) {
         httpBody.parseFormUrlEncodedBody();
       }
@@ -181,7 +188,7 @@ public class HttpRequest {
     return httpHeaders;
   }
 
-  public String getMethod() {
+  public HttpMethod getMethod() {
     return method;
   }
 
