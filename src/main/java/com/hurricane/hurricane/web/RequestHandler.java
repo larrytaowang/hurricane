@@ -1,7 +1,8 @@
 package com.hurricane.hurricane.web;
 
+import com.hurricane.hurricane.http.HttpConnection;
 import com.hurricane.hurricane.http.HttpMethod;
-import com.hurricane.hurricane.http.HttpRequestCallback;
+import com.hurricane.hurricane.http.HttpRequest;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
@@ -10,7 +11,7 @@ import java.util.Set;
 /**
  * @author larrytaowang
  */
-public abstract class RequestHandler implements HttpRequestCallback {
+public abstract class RequestHandler{
 
   /**
    * Check if a method is supported in this handler
@@ -29,4 +30,11 @@ public abstract class RequestHandler implements HttpRequestCallback {
     var methods = Arrays.asList(HttpMethod.values());
     return new HashSet<>(methods);
   }
+
+  /**
+   * Run the callback after HTTP server finishes parsing HTTP request.
+   * @param connection TCP connection that this callback hosts
+   * @param request HTTP request of this callback
+   */
+  public abstract void run(HttpConnection connection, HttpRequest request);
 }

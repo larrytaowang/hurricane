@@ -3,6 +3,7 @@ package com.hurricane.hurricane.http;
 import com.hurricane.hurricane.tcp.TcpAcceptManager;
 import com.hurricane.hurricane.tcp.TcpServer;
 import com.hurricane.hurricane.tcp.connection.TcpConnection;
+import com.hurricane.hurricane.web.RequestHandler;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -28,7 +29,7 @@ public class HttpServer {
   /**
    * Callback will be executed when finishing parsing Http request
    */
-  private HttpRequestCallback requestCallback;
+  private RequestHandler requestCallback;
 
   private HttpServer() {
   }
@@ -81,7 +82,7 @@ public class HttpServer {
     listen(port, "localhost");
   }
 
-  public void setRequestCallback(HttpRequestCallback requestCallback) {
+  public void setRequestCallback(RequestHandler requestCallback) {
     this.requestCallback = requestCallback;
   }
 }

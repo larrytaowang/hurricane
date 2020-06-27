@@ -6,7 +6,14 @@ package com.hurricane.hurricane.http;
 public class HttpException extends RuntimeException {
   private static long serialVersionUID = 1L;
 
+  private HttpStatus status;
+
   public HttpException(HttpStatus status) {
     super(status.toString());
+    this.status = status;
+  }
+
+  public HttpStatus getStatus() {
+    return status;
   }
 }

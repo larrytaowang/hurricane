@@ -5,6 +5,7 @@ import com.hurricane.hurricane.tcp.callback.TcpFlushHandler;
 import com.hurricane.hurricane.tcp.callback.TcpReadBytesHandler;
 import com.hurricane.hurricane.tcp.callback.TcpReadDelimiterHandler;
 import com.hurricane.hurricane.tcp.connection.TcpConnection;
+import com.hurricane.hurricane.web.RequestHandler;
 import java.nio.charset.StandardCharsets;
 import org.apache.log4j.Logger;
 
@@ -42,14 +43,14 @@ public class HttpConnection {
    * This callback is called when the whole request has been parsed. Note that it should be only called once. If there
    * are both Http header and body, we should only call it after the body is parsed.
    */
-  private final HttpRequestCallback requestCallback;
+  private final RequestHandler requestHandler;
 
-  public HttpConnection(TcpConnection tcpConnection, HttpRequestCallback requestCallback) {
+  public HttpConnection(TcpConnection tcpConnection, RequestHandler requestHandler) {
     this.tcpConnection = tcpConnection;
     EventLoop.getInstance().registerTcpConnection(tcpConnection.getKey(), tcpConnection);
 
     this.isNoKeepAlive = false;
-    this.requestCallback = requestCallback;
+    this.requestHandler = requestHandler;
   }
 
   /**
@@ -101,9 +102,22 @@ public class HttpConnection {
 
     // When we finish parsing request, call the callback. However, we want to call the callback exactly once. Therefore,
     // If the callback is called when parsing the Http body, we should not call it again.
-    if (!isBodyParsed && requestCallback != null) {
-      requestCallback.run(this, httpRequest);
+    if (!isBodyParsed && requestHandler != null) {
+      requestHandler.run(this, httpRequest);
     }
+  }
+
+  private void handleRequestException() {
+
+  }
+
+  /**
+   * Send the given Http error to the browser. We also send the error HTML for the given error code as returned by
+   * error html. Override that method if we want custom error pages for the application.
+   *
+   */
+  private void sendHttpError() {
+
   }
 
   /**
@@ -155,8 +169,8 @@ public class HttpConnection {
    */
   private void onHttpBodyReceived(TcpConnection connection, byte[] httpBodyBytes) {
     httpRequest.parseBody(httpBodyBytes);
-    if (requestCallback != null) {
-      requestCallback.run(this, httpRequest);
+    if (requestHandler != null) {
+      requestHandler.run(this, httpRequest);
     }
   }
 

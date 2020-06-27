@@ -3,6 +3,7 @@ package com.hurricane.hurricane.http;
 import com.hurricane.hurricane.common.Constant;
 import com.hurricane.hurricane.common.EventLoop;
 import com.hurricane.hurricane.utility.TcpUtil;
+import com.hurricane.hurricane.web.RequestHandler;
 import java.io.IOException;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
@@ -57,12 +58,16 @@ public class HttpConnectionTest {
   @Test
   public void parseHttpHeader() throws IOException, InterruptedException {
     // Set up HTTP server
-    HttpRequestCallback callback = (connection, request) -> {
-      servedConnections.add(connection);
-      if (servedConnections.size() == CLIENT_COUNT) {
-        EventLoop.getInstance().stop();
+    RequestHandler callback = new RequestHandler() {
+      @Override
+      public void run(HttpConnection connection, HttpRequest request) {
+        servedConnections.add(connection);
+        if (servedConnections.size() == CLIENT_COUNT) {
+          EventLoop.getInstance().stop();
+        }
       }
     };
+
     spinUpHttpServer(callback);
     clients = TcpUtil.prepareConnectedClients(CLIENT_COUNT);
 
@@ -102,12 +107,16 @@ public class HttpConnectionTest {
   @Test
   public void parseHttpUrlEncodedBody() throws IOException, InterruptedException {
     // Set up HTTP server
-    HttpRequestCallback callback = (connection, request) -> {
-      servedConnections.add(connection);
-      if (servedConnections.size() == CLIENT_COUNT) {
-        EventLoop.getInstance().stop();
+    RequestHandler callback = new RequestHandler() {
+      @Override
+      public void run(HttpConnection connection, HttpRequest request) {
+        servedConnections.add(connection);
+        if (servedConnections.size() == CLIENT_COUNT) {
+          EventLoop.getInstance().stop();
+        }
       }
     };
+
     spinUpHttpServer(callback);
     clients = TcpUtil.prepareConnectedClients(CLIENT_COUNT);
 
@@ -181,7 +190,7 @@ public class HttpConnectionTest {
    * @param callback callback that will be run when HTTP server finishes parsing HTTP request
    * @throws IOException Some IO errors in bind and listen operations.
    */
-  private void spinUpHttpServer(HttpRequestCallback callback) throws IOException {
+  private void spinUpHttpServer(RequestHandler callback) throws IOException {
     HttpServer httpServer = HttpServer.getInstance();
     httpServer.setRequestCallback(callback);
 
