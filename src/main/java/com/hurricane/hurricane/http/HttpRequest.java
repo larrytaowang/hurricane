@@ -184,6 +184,31 @@ public class HttpRequest {
     }
   }
 
+  /**
+   * Finish the request.
+   */
+  public void finish() {
+    httpConnection.finish();
+  }
+
+  /**
+   * Write data to the browser.
+   *
+   * @param chunk data to write
+   */
+  public void write(byte[] chunk) {
+    httpConnection.write(chunk);
+  }
+
+  /**
+   * Return summary of this Http request
+   *
+   * @return summary of this Http request
+   */
+  public String summary() {
+    return method.toString() + " " + uri;
+  }
+
   public HttpHeaders getHttpHeaders() {
     return httpHeaders;
   }

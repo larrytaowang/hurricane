@@ -13,6 +13,7 @@ import org.jetbrains.annotations.NotNull;
 
 /**
  * @author larrytaowang
+ * <p>
  * A Class that maintains Http-Header-Case for all keys. Supports multiple values per key.
  */
 public class HttpHeaders implements Iterable<Map.Entry<String, List<String>>> {
@@ -24,7 +25,8 @@ public class HttpHeaders implements Iterable<Map.Entry<String, List<String>>> {
 
   /**
    * Add a new value for the given key
-   * @param name name of a key in Http header
+   *
+   * @param name  name of a key in Http header
    * @param value One value of the key
    */
   public void add(String name, String value) {
@@ -38,6 +40,7 @@ public class HttpHeaders implements Iterable<Map.Entry<String, List<String>>> {
 
   /**
    * Returns all values for the given header as a list
+   *
    * @param name name of the header
    * @return values of the given header as list. Return empty List if header does not exist.
    */
@@ -49,6 +52,7 @@ public class HttpHeaders implements Iterable<Map.Entry<String, List<String>>> {
 
   /**
    * Update the dictionary with a single header line.
+   *
    * @param line A line contains Key-Value of header, separated by a colon
    */
   public void parseLine(String line) {
@@ -62,6 +66,7 @@ public class HttpHeaders implements Iterable<Map.Entry<String, List<String>>> {
 
   /**
    * Construct a HttpHeader from header text.
+   *
    * @param headersLine Http Header text
    * @return HttpHeader constructed from text
    */
@@ -78,6 +83,7 @@ public class HttpHeaders implements Iterable<Map.Entry<String, List<String>>> {
 
   /**
    * Convert a name to Http-Header-Case
+   *
    * @param name name of http header
    * @return name of http header in Http-Header-Case
    */
@@ -88,6 +94,7 @@ public class HttpHeaders implements Iterable<Map.Entry<String, List<String>>> {
 
   /**
    * Capitalize a string. The first character is Upper case, the rest of the string is lower case.
+   *
    * @param name the name we want to capitalize
    * @return Capitalized string
    */
@@ -106,6 +113,7 @@ public class HttpHeaders implements Iterable<Map.Entry<String, List<String>>> {
 
   /**
    * Check if key is present in this header
+   *
    * @param key header key
    * @return if header key is present
    */
@@ -115,15 +123,23 @@ public class HttpHeaders implements Iterable<Map.Entry<String, List<String>>> {
 
   /**
    * Return formatted Headers values
+   *
    * @return headers values in String
    */
   public String getContent() {
     var stringBuilder = new StringBuilder();
-    for (var key: headers.keySet()) {
+    for (var key : headers.keySet()) {
       stringBuilder.append(key).append(": ").append(getValues(key)).append(Constant.HTTP_HEADER_KEY_VALUE_DELIMITER);
     }
 
     return stringBuilder.toString();
+  }
+
+  /**
+   * Clear the headers
+   */
+  public void clear() {
+    this.headers.clear();
   }
 
   @NotNull

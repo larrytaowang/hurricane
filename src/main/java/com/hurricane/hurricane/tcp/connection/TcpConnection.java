@@ -210,6 +210,13 @@ public class TcpConnection {
     readHandler = null;
   }
 
+  /**
+   * Clear the close handler
+   */
+  public void clearCloseHandler() {
+    closeCallback = null;
+  }
+
   public TcpReadHandler getReadHandler() {
     return readHandler;
   }

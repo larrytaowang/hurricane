@@ -8,8 +8,7 @@ import org.apache.log4j.Logger;
 
 
 /**
- * @author larrytaowang
- * Specifies mappings between URLs and handlers.
+ * @author larrytaowang Specifies mappings between URLs and handlers.
  */
 public class UrlSpec {
   private final static Logger logger = Logger.getLogger(UrlSpec.class);
@@ -61,9 +60,9 @@ public class UrlSpec {
   /**
    * Given the pattern of URL path, create the formatted path of URL, that is, replace the "()" with placeholder "%s".
    * For example, given the pattern "/([0-9]{4})/([a-z-]+)/", which contains patterns for two groups, we can generate
-   * the formatted string for URL path: "/%s/%s/". The getUrlPath() function can provide the real arguments to get
-   * the real URL path, e.g., "/1234/abc".
-   *
+   * the formatted string for URL path: "/%s/%s/". The getUrlPath() function can provide the real arguments to get the
+   * real URL path, e.g., "/1234/abc".
+   * <p>
    * Note that nested parenthesis are not supported.
    */
   private void createFormattedUrlPath() {
@@ -104,6 +103,7 @@ public class UrlSpec {
 
   /**
    * Get the real URL path of this spec
+   *
    * @param args argus to construct the URL path, if regex pattern is used
    * @return real URL path
    */
@@ -134,5 +134,9 @@ public class UrlSpec {
 
   public Pattern getPattern() {
     return pattern;
+  }
+
+  public RequestHandler getHandler() {
+    return handler;
   }
 }

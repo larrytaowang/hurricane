@@ -107,19 +107,6 @@ public class HttpConnection {
     }
   }
 
-  private void handleRequestException() {
-
-  }
-
-  /**
-   * Send the given Http error to the browser. We also send the error HTML for the given error code as returned by
-   * error html. Override that method if we want custom error pages for the application.
-   *
-   */
-  private void sendHttpError() {
-
-  }
-
   /**
    * Check the CONTENT-LENGTH filed to see if parsing HTTP request body is necessary.
    *
