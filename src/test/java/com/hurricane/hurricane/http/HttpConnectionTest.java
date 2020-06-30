@@ -16,6 +16,8 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import static com.hurricane.hurricane.utility.HttpUtil.*;
+
 
 public class HttpConnectionTest {
 
@@ -167,8 +169,7 @@ public class HttpConnectionTest {
         TcpUtil.clientSendData(client, httpRequestData);
 
         // Client should receive HTTP response for 100-continue
-        var response = Constant.HTTP_100_CONTINUE_RESPONSE.getBytes(StandardCharsets.UTF_8);
-        TcpUtil.clientShouldReceiveData(client, response);
+        TcpUtil.clientShouldReceiveData(client, Constant.HTTP_100_CONTINUE_RESPONSE);
 
         latch.countDown();
         if (latch.getCount() == 0) {
@@ -183,17 +184,5 @@ public class HttpConnectionTest {
 
     // wait for all threads in the pool finish
     latch.await();
-  }
-
-  /**
-   * Binds the HTTP server to an ephemeral port and listens to new connections.
-   * @param callback callback that will be run when HTTP server finishes parsing HTTP request
-   * @throws IOException Some IO errors in bind and listen operations.
-   */
-  private void spinUpHttpServer(RequestHandler callback) throws IOException {
-    HttpServer httpServer = HttpServer.getInstance();
-    httpServer.setRequestCallback(callback);
-
-    httpServer.listen(-1);
   }
 }

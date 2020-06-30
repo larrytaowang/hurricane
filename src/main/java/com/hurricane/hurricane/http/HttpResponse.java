@@ -73,19 +73,30 @@ public class HttpResponse {
   }
 
   /**
-   * Get bytes of HTTP response encoded in UTF8. This should only be called when are about to send the body. So, clean
-   * the body when the bytes are sent to the caller.
+   * Get bytes of HTTP response encoded in UTF8.
    *
    * @return bytes of HTTP response
    */
   public byte[] getBodyBytes() {
-    var bodyBytes = body.toString().getBytes(StandardCharsets.UTF_8);
-    body.setLength(0);
-    return bodyBytes;
+    return body.toString().getBytes(StandardCharsets.UTF_8);
   }
 
-  public boolean isHeaderWritten() {
-    return isHeaderWritten;
+  /**
+   * Check if the header of response has been written.
+   * @return if the header of response has been written.
+   */
+  public boolean headerNotWritten() {
+    return !isHeaderWritten;
+  }
+
+  /**
+   * Clear the content of current request response, so this can be used by next Http request.
+   */
+  public void reset() {
+    headers.clear();
+    body.setLength(0);
+    status = HttpStatus.OK;
+    isHeaderWritten = false;
   }
 
   public HttpHeaders getHeaders() {

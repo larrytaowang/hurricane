@@ -209,7 +209,7 @@ public class TcpConnectionTest {
   private void clientsReceiveDataInParallel(CountDownLatch latch) {
     for (var client : clients) {
       executeService.submit(() -> {
-        TcpUtil.clientShouldReceiveData(client, TEST_BYTES);
+        TcpUtil.clientShouldReceiveData(client, TEST_STRING);
         latch.countDown();
         return null;
       });
