@@ -39,5 +39,3 @@ public class HelloWorld {
   }
 }
 ```
-
-![Hello World Sample Execution](src/main/resources/Hello-World-Sample-Execution.gif)
