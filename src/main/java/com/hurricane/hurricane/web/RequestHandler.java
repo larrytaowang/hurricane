@@ -115,23 +115,15 @@ public class RequestHandler {
    */
   public void run(HttpConnection connection, HttpRequest request) {
     logger.info("Start to process the Http Request with handler");
-    try {
-      var requestMethod = request.getMethod();
-      if (!isMethodSupported(requestMethod)) {
-        throw new HttpException(HttpStatus.METHOD_NOT_ALLOWED);
-      }
 
-      prepare(request);
-      execute(request);
-      finish(request);
-
-    } catch (HttpException e) {
-      logger.error("Http exception " + request.summary(), e);
-//      sendError(connection, e.getStatus(), Optional.of(request));
-    } catch (Exception e) {
-      logger.error("Uncaught exception" + request.summary() + " when handling Http request = " + request.toString(), e);
-//      sendError(connection, HttpStatus.INTERNAL_SERVER_ERROR, Optional.of(request));
+    var requestMethod = request.getMethod();
+    if (!isMethodSupported(requestMethod)) {
+      throw new HttpException(HttpStatus.METHOD_NOT_ALLOWED);
     }
+
+    prepare(request);
+    execute(request);
+    finish(request);
   }
 
   /**
@@ -250,47 +242,4 @@ public class RequestHandler {
       request.write(responseBodyBytes);
     }
   }
-
-//
-//  /**
-//   * Override this method if a subclass wants to get customized error pages.
-//   *
-//   * @return html content of error page
-//   */
-//  protected String getErrorHtml(HttpStatus status) {
-//    return "<html><title>" + status.toString() + "</title><body>" + status.toString() + "</body></html>";
-//  }
-//
-//  /**
-//   * Send the given HTTP error code to the browser. We also send the error HTML for the given error code as returned by
-//   * getErrorHtml(). Override that method if you want custom error pages for your application.
-//   *
-//   * @param connection  Http connection
-//   * @param status      Http status code
-//   * @param httpRequest Http request to handle. This may be null if the request is malformed and we failed the construct
-//   *                    a Http request.
-//   */
-//  private void sendError(HttpConnection connection, HttpStatus status, Optional<HttpRequest> httpRequest) {
-//    httpRequest.ifPresent(r -> {
-//      if (headersWritten) {
-//        logger.error("Cannot send error response after headers written");
-//        if (!finished) {
-//          finish(r);
-//        }
-//        return;
-//      }
-//
-//      resetResponse(r);
-//      resetResponse(r);
-//    });
-//
-//    connection.clearWriteCache();
-//  }
-//
-//  /**
-//   *
-//   */
-//  private void resetResponse(HttpRequest httpRequest) {
-//
-//  }
 }
